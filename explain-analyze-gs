@@ -1,4 +1,62 @@
- # analyze of application category filter
+#query 1 with bad join
+explain analyze select count(distinct(soda.task_instance.date, soda.task_instance.user_uuid)) AS no_of_user_days, 
+coalesce(array_agg(DISTINCT soda.users.user_uuid), NULL) AS user_uuid_list, 
+count(DISTINCT soda.users.user_uuid) AS total_users, 
+sum(soda.task_instance.time_spent) AS total_time_spent, 
+sum(soda.task_instance_context.toil_reduction) AS total_toil_reduction 
+FROM soda.task_instance 
+JOIN soda.task_instance_context ON soda.task_instance.task_instance_uuid = soda.task_instance_context.task_instance_uuid
+JOIN soda.users ON soda.users.user_uuid = soda.task_instance.user_uuid 
+JOIN 
+(SELECT distinct(soda.task_point_of_interest.task_instance_uuid) AS task_instance_uuid 
+ FROM soda.task_point_of_interest WHERE soda.task_point_of_interest.hotspot_category = 'Application' 
+and soda.task_point_of_interest.hotspot_subcategory = 'Desktop'
+) AS anon_1 ON anon_1.task_instance_uuid = soda.task_instance.task_instance_uuid 
+JOIN soda.task ON soda.task.task_uuid = soda.task_instance.task_uuid 
+WHERE soda.task_instance.date BETWEEN '2022-01-14' AND '2022-01-20' 
+AND soda.task_instance.task_instance_uuid IN (
+    (SELECT soda.task_point_of_interest.task_instance_uuid AS soda_task_point_of_interest_task_instance_uuid 
+     FROM soda.task_point_of_interest 
+     JOIN soda.task_instance ON soda.task_point_of_interest.task_instance_uuid = soda.task_instance.task_instance_uuid
+     WHERE soda.task_point_of_interest.hotspot_category = 'Demographic' AND soda.task_point_of_interest.hotspot_subcategory = 'Team' 
+     AND soda.task_point_of_interest.hotspot_name IN ('Pd') 
+     AND soda.task_instance.date BETWEEN '2022-01-14' AND '2022-01-20' 
+     INTERSECT 
+     SELECT soda.task_point_of_interest.task_instance_uuid AS soda_task_point_of_interest_task_instance_uuid 
+     FROM soda.task_point_of_interest 
+     JOIN soda.task_instance ON soda.task_point_of_interest.task_instance_uuid = soda.task_instance.task_instance_uuid 
+     LEFT OUTER JOIN soda.task_instance_context ON soda.task_point_of_interest.task_instance_uuid = soda.task_instance_context.task_instance_uuid 
+     WHERE soda.task_instance.date BETWEEN '2022-01-14' AND '2022-01-20')) AND soda.task.tag IN ('prod');
+
+#query2 with better join
+explain analyze select count(distinct(soda.task_instance.date, soda.task_instance.user_uuid)) AS no_of_user_days, 
+coalesce(array_agg(DISTINCT soda.users.user_uuid), NULL) AS user_uuid_list, 
+count(DISTINCT soda.users.user_uuid) AS total_users, 
+sum(soda.task_instance.time_spent) AS total_time_spent, 
+sum(soda.task_instance_context.toil_reduction) AS total_toil_reduction 
+FROM soda.task_instance 
+JOIN soda.task_instance_context ON soda.task_instance.task_instance_uuid = soda.task_instance_context.task_instance_uuid
+JOIN soda.users ON soda.users.user_uuid = soda.task_instance.user_uuid 
+JOIN soda.task_point_of_interest on soda.task_point_of_interest.task_instance_uuid = soda.task_instance.task_instance_uuid 
+JOIN soda.task ON soda.task.task_uuid = soda.task_instance.task_uuid 
+WHERE soda.task_instance.date BETWEEN '2022-01-14' AND '2022-01-20' 
+AND soda.task_point_of_interest.hotspot_category = 'Demographic' and soda.task_point_of_interest.hotspot_subcategory = 'Role'
+AND soda.task_instance.task_instance_uuid IN (
+    (SELECT soda.task_point_of_interest.task_instance_uuid AS soda_task_point_of_interest_task_instance_uuid 
+     FROM soda.task_point_of_interest 
+     JOIN soda.task_instance ON soda.task_point_of_interest.task_instance_uuid = soda.task_instance.task_instance_uuid
+     WHERE soda.task_point_of_interest.hotspot_category = 'Demographic' AND soda.task_point_of_interest.hotspot_subcategory = 'Team' 
+     AND soda.task_point_of_interest.hotspot_name IN ('Pd') 
+     AND soda.task_instance.date BETWEEN '2022-01-14' AND '2022-01-20' 
+     INTERSECT 
+     SELECT soda.task_point_of_interest.task_instance_uuid AS soda_task_point_of_interest_task_instance_uuid 
+     FROM soda.task_point_of_interest 
+     JOIN soda.task_instance ON soda.task_point_of_interest.task_instance_uuid = soda.task_instance.task_instance_uuid 
+     LEFT OUTER JOIN soda.task_instance_context ON soda.task_point_of_interest.task_instance_uuid = soda.task_instance_context.task_instance_uuid 
+     WHERE soda.task_instance.date BETWEEN '2022-01-14' AND '2022-01-20')) AND soda.task.tag IN ('prod')
+
+
+# analyze of application category filter
  Aggregate  (cost=256472.22..256472.23 rows=1 width=64) (actual time=1450.437..1450.794 rows=1 loops=1)
    ->  Nested Loop  (cost=248695.16..256472.20 rows=1 width=52) (actual time=1247.117..1443.355 rows=4943 loops=1)
          ->  Nested Loop  (cost=248694.74..256466.63 rows=1 width=68) (actual time=1247.102..1423.677 rows=4943 loops=1)
