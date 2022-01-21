@@ -1,0 +1,75 @@
+ # analyze of application category filter
+ Aggregate  (cost=256472.22..256472.23 rows=1 width=64) (actual time=1450.437..1450.794 rows=1 loops=1)
+   ->  Nested Loop  (cost=248695.16..256472.20 rows=1 width=52) (actual time=1247.117..1443.355 rows=4943 loops=1)
+         ->  Nested Loop  (cost=248694.74..256466.63 rows=1 width=68) (actual time=1247.102..1423.677 rows=4943 loops=1)
+               ->  Nested Loop  (cost=248694.47..256466.34 rows=1 width=52) (actual time=1247.090..1418.298 rows=4943 loops=1)
+                     Join Filter: (task_instance.task_instance_uuid = task_instance_context.task_instance_uuid)
+                     ->  Nested Loop  (cost=248694.04..256465.33 rows=1 width=92) (actual time=1247.077..1393.260 rows=4943 loops=1)
+                           ->  Hash Join  (cost=248693.61..256385.04 rows=74 width=32) (actual time=1247.050..1371.790 rows=4943 loops=1)
+                                 Hash Cond: (task_point_of_interest.task_instance_uuid = "ANY_subquery".soda_task_point_of_interest_task_instance_uuid)
+                                 ->  HashAggregate  (cost=95568.59..98968.11 rows=339952 width=16) (actual time=719.427..803.010 rows=425527 loops=1)
+                                       Group Key: task_point_of_interest.task_instance_uuid
+                                       ->  Seq Scan on task_point_of_interest  (cost=0.00..92801.66 rows=1106772 width=16) (actual time=10.875..448.941 rows=1123355 loops=1)
+                                             Filter: ((hotspot_category)::text = 'Application'::text)
+                                             Rows Removed by Filter: 1781892
+                                 ->  Hash  (cost=153124.10..153124.10 rows=74 width=16) (actual time=527.599..527.951 rows=4943 loops=1)
+                                       Buckets: 8192 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 296kB
+                                       ->  Subquery Scan on "ANY_subquery"  (cost=16527.52..153124.10 rows=74 width=16) (actual time=526.053..527.434 rows=4943 loops=1)
+                                             ->  HashSetOp Intersect  (cost=16527.52..153123.36 rows=74 width=20) (actual time=526.052..526.908 rows=4943 loops=1)
+                                                   ->  Append  (cost=16527.52..153004.12 rows=47696 width=20) (actual time=26.345..501.914 rows=265744 loops=1)
+                                                         ->  Subquery Scan on "*SELECT* 1"  (cost=16527.52..56006.33 rows=74 width=20) (actual time=26.344..135.993 rows=4943 loops=
+1)
+                                                               ->  Gather  (cost=16527.52..56005.59 rows=74 width=16) (actual time=26.343..135.536 rows=4943 loops=1)
+                                                                     Workers Planned: 2
+                                                                     Workers Launched: 2
+                                                                     ->  Nested Loop  (cost=15527.52..54998.19 rows=31 width=16) (actual time=16.315..125.273 rows=1648 loops=3)
+                                                                           ->  Parallel Bitmap Heap Scan on task_point_of_interest task_point_of_interest_1  (cost=15527.09..41363.6
+0 rows=1883 width=16) (actual time=16.228..23.454 rows=22496 loops=3)
+                                                                                 Recheck Cond: (((hotspot_name)::text = 'Pd'::text) AND ((hotspot_subcategory)::text = 'Team'::text)
+)
+                                                                                 Filter: ((hotspot_category)::text = 'Demographic'::text)
+                                                                                 Heap Blocks: exact=948
+                                                                                 ->  BitmapAnd  (cost=15527.09..15527.09 rows=10068 width=0) (actual time=25.074..25.075 rows=0 loop
+s=1)
+                                                                                       ->  Bitmap Index Scan on task_point_of_interest_hotspot_name_idx  (cost=0.00..2660.49 rows=66
+658 width=0) (actual time=3.507..3.507 rows=68953 loops=1)
+                                                                                             Index Cond: ((hotspot_name)::text = 'Pd'::text)
+                                                                                       ->  Bitmap Index Scan on task_point_of_interest_hotspot_subcategory_idx  (cost=0.00..12864.09
+ rows=438355 width=0) (actual time=21.469..21.469 rows=439273 loops=1)
+                                                                                             Index Cond: ((hotspot_subcategory)::text = 'Team'::text)
+                                                                           ->  Index Scan using task_instance_pkey on task_instance task_instance_1  (cost=0.43..7.24 rows=1 width=1
+6) (actual time=0.004..0.004 rows=0 loops=67489)
+                                                                                 Index Cond: (task_instance_uuid = task_point_of_interest_1.task_instance_uuid)
+                                                                                 Filter: ((date >= '2022-01-14'::date) AND (date <= '2022-01-20'::date))
+                                                                                 Rows Removed by Filter: 1
+                                                         ->  Subquery Scan on "*SELECT* 2"  (cost=19969.67..96997.79 rows=47622 width=20) (actual time=15.126..352.448 rows=260801 l
+oops=1)
+                                                               ->  Gather  (cost=19969.67..96521.57 rows=47622 width=16) (actual time=15.125..333.508 rows=260801 loops=1)
+                                                                     Workers Planned: 2
+                                                                     Workers Launched: 2
+                                                                     ->  Hash Join  (cost=18969.67..90759.37 rows=19842 width=16) (actual time=19.418..281.265 rows=86934 loops=3)
+                                                                           Hash Cond: (task_point_of_interest_2.task_instance_uuid = task_instance_2.task_instance_uuid)
+                                                                           ->  Parallel Seq Scan on task_point_of_interest task_point_of_interest_2  (cost=0.00..68615.22 rows=12093
+22 width=16) (actual time=0.013..105.245 rows=968416 loops=3)
+                                                                           ->  Hash  (cost=18748.72..18748.72 rows=17676 width=16) (actual time=19.181..19.181 rows=36942 loops=3)
+                                                                                 Buckets: 65536 (originally 32768)  Batches: 1 (originally 1)  Memory Usage: 2244kB
+                                                                                 ->  Index Scan using task_instance_date_idx on task_instance task_instance_2  (cost=0.43..18748.72
+rows=17676 width=16) (actual time=0.057..13.218 rows=36942 loops=3)
+                                                                                       Index Cond: ((date >= '2022-01-14'::date) AND (date <= '2022-01-20'::date))
+                           ->  Index Scan using task_instance_pkey on task_instance  (cost=0.43..1.08 rows=1 width=60) (actual time=0.004..0.004 rows=1 loops=4943)
+                                 Index Cond: (task_instance_uuid = task_point_of_interest.task_instance_uuid)
+                                 Filter: ((date >= '2022-01-14'::date) AND (date <= '2022-01-20'::date))
+                     ->  Index Scan using task_instance_context_task_instance_uuid_key on task_instance_context  (cost=0.43..1.00 rows=1 width=24) (actual time=0.005..0.005 rows=1
+loops=4943)
+                           Index Cond: (task_instance_uuid = task_point_of_interest.task_instance_uuid)
+               ->  Index Only Scan using user_uuid_pkey on users  (cost=0.27..0.29 rows=1 width=16) (actual time=0.001..0.001 rows=1 loops=4943)
+                     Index Cond: (user_uuid = task_instance.user_uuid)
+                     Heap Fetches: 0
+         ->  Index Scan using task_pkey on task  (cost=0.42..5.58 rows=1 width=16) (actual time=0.004..0.004 rows=1 loops=4943)
+               Index Cond: (task_uuid = task_instance.task_uuid)
+               Filter: ((tag)::text = 'prod'::text)
+ Planning time: 5.553 ms
+ Execution time: 1461.626 ms
+
+# analyze of application and desktop filter
+
